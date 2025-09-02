@@ -3,6 +3,8 @@
 This is a Streamlit app that uses **Google’s Gemini models** to analyze videos stored in a Google Cloud Storage bucket and detect **scene changes** (shot boundaries).  
 The app identifies the **best points for ad placement** across a movie or video and returns detailed metadata (timestamp, reason, transition type, narrative type, etc.).  
 
+![Demo](app.gif)
+
 On the UI:
 - **Sidebar** lets you select:
   - GCP project ID (default: `vertex-ai-search-v2`)
