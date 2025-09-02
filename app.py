@@ -11,16 +11,21 @@ from google.genai import types
 from google.cloud import storage
 
 
-def read_json_as_string(file_path: str) -> str:
-    """Read a JSON file and return its content as a pretty-formatted string."""
-    with open(file_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    return json.dumps(data, indent=4, ensure_ascii=False)
-
+@st.cache_data
+def load_json_as_string(file_path: str) -> str:
+    """Load a JSON file and return its content as a pretty-formatted string."""
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return json.dumps(data, indent=4, ensure_ascii=False)
+    except Exception as e:
+        st.warning(f"Could not read {file_path} ({e}). Using empty list.")
+        return "[]"
 
 # ---------------- MODEL CALL ----------------
 def scene_change_detection(video_file_url, client, model="gemini-2.5-flash"):
-    iab_list = read_json_as_string('iab_categories.json')
+    
+    iab_list = load_json_as_string("iab_categories.json")
     system_instruction = f'''
            I have a video that I need you to analyze for ad placement by detecting scene changes, 
            also known as shot boundaries. I need to identify the 10 best scene changes across the 
@@ -203,7 +208,14 @@ def run_detection():
 
 # ---------------- APP ----------------
 st.set_page_config(page_title="Scene Change Detection", layout="wide")
-st.title("🎬 Scene Change Detection (Gemini 2.5)")
+st.title(" ")
+st.image("logo.png",width=700)
+st.markdown(
+    "<hr style='border:2px solid #6495ED; margin-top:10px; margin-bottom:10px;'>",
+    unsafe_allow_html=True
+)
+
+
 
 ensure_state()
 
@@ -248,8 +260,11 @@ with st.sidebar:
     st.session_state.selected_uri = custom_url.strip() if custom_url.strip() else gs_choice
 
     # Run button triggers callback that writes results into session
-    st.button("Run detection", type="primary", use_container_width=True, on_click=run_detection)
+    # st.button("Run detection", type="primary", use_container_width=True, on_click=run_detection) #1
+    run = st.button("Run detection", type="primary", use_container_width=True)
 
+if run:
+    run_detection()
 # ---------- MAIN: Render results if present (persists across re-runs) ----------
 if st.session_state.last_results:
     st.subheader("Results")
