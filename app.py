@@ -10,9 +10,18 @@ from google import genai
 from google.genai import types
 from google.cloud import storage
 
+
+def read_json_as_string(file_path: str) -> str:
+    """Read a JSON file and return its content as a pretty-formatted string."""
+    with open(file_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return json.dumps(data, indent=4, ensure_ascii=False)
+
+
 # ---------------- MODEL CALL ----------------
 def scene_change_detection(video_file_url, client, model="gemini-2.5-flash"):
-    system_instruction = '''
+    iab_list = read_json_as_string('iab_categories.json')
+    system_instruction = f'''
            I have a video that I need you to analyze for ad placement by detecting scene changes, 
            also known as shot boundaries. I need to identify the 10 best scene changes across the 
            entire movie, which are the best potential points for ad placement as they minimize 
@@ -29,6 +38,8 @@ def scene_change_detection(video_file_url, client, model="gemini-2.5-flash"):
             between these two scenes is a good place for an ad.
 
             summary: A brief summary of the scene before the change.
+            
+            summary_key_words: Top 5 keywords for scene summary.
 
             transition_feeling: The main feeling that the transition makes in viewers like excitement, peace, fear, etc.
 
@@ -41,6 +52,9 @@ def scene_change_detection(video_file_url, client, model="gemini-2.5-flash"):
             characters_type: The types of the most important character involved in the scene transition like protagonist, antagonist, supporting, etc.
 
             scene_categories:  Classification of the scene before the change into the categories such as action, drama, comedy, etc.
+            
+            IAB_categories: Provide the top 3 IAB categories that are most relevant to the scene. The selection should consider not only the overall theme and genre of the movie but also
+            the specific nuances and context of the individual scene. Here is the list of lab_catgeories from which top 3 msut be selected: {iab_list}
           '''      
 
     response_schema = {
@@ -49,6 +63,8 @@ def scene_change_detection(video_file_url, client, model="gemini-2.5-flash"):
             "type": "object",
             "properties": {
                 "timestamp": {"type": "string"},
+                "summary": {"type": "string"},
+                "summary_key_words": {"type": "array"},
                 "reason": {"type": "string"},
                 "transition_feeling": {"type": "string"},
                 "transition_type": {"type": "string"},
@@ -56,12 +72,11 @@ def scene_change_detection(video_file_url, client, model="gemini-2.5-flash"):
                 "dialogue_intensity": {"type": "string"},
                 "characters_type": {"type": "string"},
                 "scene_categories": {"type": "string"},
-                "summary": {"type": "string"},
+                "IAB_categories": {"type": "array"},
             },
-            "required": [
-                "timestamp", "reason", "transition_feeling", "transition_type",
-                "narrative_type", "characters_type", "scene_categories"
-            ],
+            # Ensure that these properties are always present in the output
+            "required": ["timestamp","summary","summary_key_words" ,"reason","transition_feeling"
+                         ,"transition_type","narrative_type", "characters_type","scene_categories","IAB_categories"],
         },
     }
 
